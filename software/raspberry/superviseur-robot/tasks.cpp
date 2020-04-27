@@ -79,7 +79,7 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_mutex_create(&mutex_counter_error, NULL)) {
+    if (err = rt_mutex_create(&mutex_error_count, NULL)) {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -143,7 +143,7 @@ void Tasks::Init() {
     }
     
     //Our tasks
-    if (err = rt_task_create(&th_refreshWD, "th_refreshWD", 0, PRIORITY_TREFRESHWD, 0)) {
+    if (err = rt_task_create(&th_refreshWD, ",th_refreshWD", 0, PRIORITY_TREFRESHWD, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -335,8 +335,7 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_mutex_release(&mutex_watchDog);
             //start
             rt_sem_v(&sem_startRobot);
-        } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) 
-        {
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) {
             //Indicating that we are starting with WatchDog
             rt_mutex_acquire(&mutex_watchDog, TM_INFINITE);
             watchDog = true;
@@ -525,6 +524,7 @@ void Tasks::RefreshWDTask(void *arg)
     
     //Beginning of the Task
     rt_task_set_periodic(&th_refreshWD, TM_NOW, 100000000);
+    //rt_task_set_periodic(NULL, TM_NOW, 100000000);
     
     while(1) {
         rt_task_wait_period(NULL);
@@ -543,7 +543,43 @@ void Tasks::RefreshWDTask(void *arg)
 
 Message *Tasks::MessageRobot(Message *msg)
 {
-    return NULL;
+    Message response;
+    int cpt;
+    //Message sending and answer receiving
+    response = robot.Write(msg);
+    
+    //If Error Message
+    if (response->CompareID(MESSAGE_ANSWER_ROBOT_ERROR)) {
+        //Incrementing the counter
+        rt_mutex_acquire(&mutex_error_count, TM_INFINITE);
+        error_count++;
+        cpt = error_count;
+        rt_mutex_release(&mutex_error_count);
+        
+        cout << "Communication error" << endl << flush;
+        
+        //If the number of errors exceeds 3
+        if (cpt>=3) {
+            cout << "Restart" << endl << flush;
+            // Send message to the monitor 
+            Message m = MESSAGE_ANSWER_COM_ERROR ;
+            rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+            monitor.Write(&m);
+            rt_mutex_release(&mutex_monitor);
+            //Close the ComRobot communication
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            robot.Close();
+            robot.Reset();
+            rt_mutex_release(&mutex_robot);
+        }
+    } else {
+        //Error Count Reset back to 0
+        rt_mutex_acquire(&mutex_error_count, TM_INFINITE);
+        error_count = 0;
+        rt_mutex_release(&mutex_error_count);
+    }
+    
+    return response;
 }
 
 // Ours Tasks implementations

@@ -543,7 +543,7 @@ void Tasks::RefreshWDTask(void *arg)
 
 Message *Tasks::MessageRobot(Message *msg)
 {
-    Message response;
+    Message* response;
     int cpt;
     //Message sending and answer receiving
     response = robot.Write(msg);

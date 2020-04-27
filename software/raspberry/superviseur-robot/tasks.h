@@ -91,7 +91,7 @@ private:
     RT_MUTEX mutex_move;
     //Our Mutexes
     RT_MUTEX mutex_watchDog;
-    RT_MUTEX mutex_counter_error
+    RT_MUTEX mutex_counter_error;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -102,7 +102,7 @@ private:
     RT_SEM sem_startRobot;
     //Our Semaphores
     RT_SEM sem_refreshWD;
-    RT_SEM sem_batteryLevel
+    RT_SEM sem_batteryLevel;
 
     /**********************************************************************/
     /* Message queues                                                     */

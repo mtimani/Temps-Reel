@@ -68,6 +68,7 @@ private:
     int move = MESSAGE_ROBOT_STOP;
     //Our variables
     bool watchDog = false;
+    int error_count = 0;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -91,7 +92,7 @@ private:
     RT_MUTEX mutex_move;
     //Our Mutexes
     RT_MUTEX mutex_watchDog;
-    RT_MUTEX mutex_counter_error;
+    RT_MUTEX mutex_error_count;
 
     /**********************************************************************/
     /* Semaphores                                                         */

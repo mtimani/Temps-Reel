@@ -210,31 +210,6 @@ void Tasks::Join() {
     pause();
 }
 
-//Refresh WatchDog Task
-void Tasks::RefreshWDTask(void *arg)
-{
-    int rs_status;
-    //Synchronization barrier
-    rt_sem_p(&sem_refreshWD, TM_INFINITE);
-    
-    //Beginning of the Task
-    rt_task_set_periodic(&th_refreshWD, TM_NOW, 100000000);
-    
-    while(1) {
-        rt_task_wait_period(NULL);
-        cout << "WatchDog Refresh";
-        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
-        rs_status = robotStarted;
-        rt_mutex_release(&mutex_robotStarted);
-        if (rs_status) {
-            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Write(robot.ReloadWD());
-            rt_mutex_release(&mutex_robot);
-        }
-        cout << endl << flush;
-    }
-}
-
 /**
  * @brief Thread handling server communication with the monitor.
  */
@@ -385,6 +360,9 @@ void Tasks::OpenComRobot(void *arg) {
  * @brief Thread starting the communication with the robot.
  */
 void Tasks::StartRobotTask(void *arg) {
+    
+    bool wd;
+    
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
@@ -395,13 +373,29 @@ void Tasks::StartRobotTask(void *arg) {
     while (1) {
 
         Message * msgSend;
+        //Robot Start
         rt_sem_p(&sem_startRobot, TM_INFINITE);
-        cout << "Start robot without watchdog (";
-        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-        msgSend = robot.Write(robot.StartWithoutWD());
-        rt_mutex_release(&mutex_robot);
-        cout << msgSend->GetID();
-        cout << ")" << endl;
+        //Mutex for boolean WatchDog
+        rt_mutex_acquire(&mutex_watchDog, TM_INFINITE);
+        wd = watchDog;
+        rt_mutex_release(&mutex_watchDog);
+        
+        //WatchDog parameter distinction
+        if (wd) {
+            cout << "Start robot with watchdog (";
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            msgSend = robot.Write(robot.StartWithWD());
+            rt_mutex_release(&mutex_robot);
+            cout << msgSend->GetID();
+            cout << ")" << endl;
+        } else {
+            cout << "Start robot without watchdog (";
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            msgSend = robot.Write(robot.StartWithoutWD());
+            rt_mutex_release(&mutex_robot);
+            cout << msgSend->GetID();
+            cout << ")" << endl;
+        }
 
         cout << "Movement answer: " << msgSend->ToString() << endl << flush;
         WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
@@ -483,3 +477,29 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
+/**************************************Our Tasks********************************************/
+
+//Refresh WatchDog Task
+void Tasks::RefreshWDTask(void *arg)
+{
+    int rs_status;
+    //Synchronization barrier
+    rt_sem_p(&sem_refreshWD, TM_INFINITE);
+    
+    //Beginning of the Task
+    rt_task_set_periodic(&th_refreshWD, TM_NOW, 100000000);
+    
+    while(1) {
+        rt_task_wait_period(NULL);
+        cout << "WatchDog Refresh";
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        rs_status = robotStarted;
+        rt_mutex_release(&mutex_robotStarted);
+        if (rs_status) {
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            robot.Write(robot.ReloadWD());
+            rt_mutex_release(&mutex_robot);
+        }
+        cout << endl << flush;
+    }
+}

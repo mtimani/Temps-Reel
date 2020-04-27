@@ -98,6 +98,7 @@ private:
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
+    RT_SEM sem_refreshWD;
 
     /**********************************************************************/
     /* Message queues                                                     */

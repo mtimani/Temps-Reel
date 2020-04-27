@@ -300,6 +300,14 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_sem_v(&sem_startRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) 
         {
+            //Indicating that we are starting with WatchDog
+            rt_mutex_acquire(&mutex_watchDog, TM_INFINITE);
+            watchDog = true;
+            rt_mutex_release(&mutex_watchDog);
+            //start
+            rt_sem_v(&sem_startRobot);
+            //Refresh Watchdog with th_refreshWD
+            rt_sem_v(&sem_refreshWD) ;
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||

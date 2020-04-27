@@ -113,10 +113,6 @@ private:
     /**********************************************************************/
     /* Tasks' functions                                                   */
     /**********************************************************************/
-    /**
-     * @brief Thread handling the WatchDog periodical refresh
-     */
-    void RefreshWDTask(void *arg);
     
     /**
      * @brief Thread handling server communication with the monitor.
@@ -164,6 +160,23 @@ private:
      * @return Message read
      */
     Message *ReadInQueue(RT_QUEUE *queue);
+    
+    /**
+     * @brief Thread handling the WatchDog periodical refresh
+     */
+    void RefreshWDTask(void *arg);
+    
+    /**
+     * Send and receive messages from Robot
+     * @param msg Message
+     * @return 
+     */
+    Message *Tasks::MessageRobot(Message *msg);
+    
+    /**
+     * @brief Thread handling the battery status update
+     */
+    void UpdateBatteryTask(void * arg);
 
 };
 

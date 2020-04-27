@@ -519,3 +519,10 @@ void Tasks::RefreshWDTask(void *arg)
         cout << endl << flush;
     }
 }
+
+Message *Tasks::MessageRobot(Message *msg)
+{
+    
+}
+
+void Tasks::UpdateBatteryTask(void * arg) {}

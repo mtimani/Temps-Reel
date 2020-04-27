@@ -81,6 +81,8 @@ private:
     //Our tasks
     RT_TASK th_refreshWD;
     RT_TASK th_batteryLevel;
+    RT_TASK th_actionCamera;
+    RT_TASK th_comCamera;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -171,12 +173,23 @@ private:
      * @param msg Message
      * @return 
      */
-    Message *Tasks::MessageRobot(Message *msg);
+    Message* MessageRobot(Message *msg);
     
     /**
      * @brief Thread handling the battery status update
      */
     void UpdateBatteryTask(void * arg);
+    
+    /**
+     * @brief Thread handling the communication with the camera
+     */
+    void ComCameraTask(void * arg);
+    
+    
+    /**
+     * @brief Thread handling the actions with the camera
+     */
+    void ActionCameraTask(void * arg);
 
 };
 

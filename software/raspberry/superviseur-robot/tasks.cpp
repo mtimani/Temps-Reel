@@ -152,6 +152,16 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     
+    if (err = rt_task_create(&th_actionCamera, "th_actionCamera", 0, PRIORITY_TCAMERA, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
+    if (err = rt_task_create(&th_actionCamera, "th_batteryLevel", 0, PRIORITY_TCAMERA, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -202,7 +212,18 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    
     if (err = rt_task_start(&th_batteryLevel, (void(*)(void*)) & Tasks::UpdateBatteryTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
+    if (err = rt_task_start(&th_actionCamera, (void(*)(void*)) & Tasks::ActionCameraTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
+     if (err = rt_task_start(&th_comCamera, (void(*)(void*)) & Tasks::ComCameraTask, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -522,7 +543,16 @@ void Tasks::RefreshWDTask(void *arg)
 
 Message *Tasks::MessageRobot(Message *msg)
 {
+    return NULL;
+}
+
+// Ours Tasks implementations
+void Tasks::UpdateBatteryTask(void * arg) {}
+
+void Tasks::ActionCameraTask(void * arg) {
     
 }
 
-void Tasks::UpdateBatteryTask(void * arg) {}
+void Tasks::ComCameraTask(void * arg) {
+    
+}

@@ -110,6 +110,11 @@ private:
     /* Tasks' functions                                                   */
     /**********************************************************************/
     /**
+     * @brief Thread handling the WatchDog periodical refresh
+     */
+    void RefreshWDTask(void *arg);
+    
+    /**
      * @brief Thread handling server communication with the monitor.
      */
     void ServerTask(void *arg);

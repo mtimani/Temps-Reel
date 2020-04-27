@@ -26,6 +26,8 @@
 #define PRIORITY_TRECEIVEFROMMON 25
 #define PRIORITY_TSTARTROBOT 20
 #define PRIORITY_TCAMERA 21
+#define PRIORITY_TBATTERYLEVEL 20
+#define PRIORITY_TREFRESHWD 20
 
 /*
  * Some remarks:
@@ -123,6 +125,17 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    
+    //Our tasks
+    if (err = rt_task_create(&th_refreshWD, "th_refreshWD", 0, PRIORITY_TREFRESHWD, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_batteryLevel, "th_batteryLevel", 0, PRIORITY_TBATTERYLEVEL, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -168,6 +181,16 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
 
+    //Our Tasks
+    if (err = rt_task_start(&th_refreshWD, (void(*)(void*)) & Tasks::RefreshWDTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_batteryLevel, (void(*)(void*)) & Tasks::UpdateBatteryTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     cout << "Tasks launched" << endl << flush;
 }
 
@@ -261,11 +284,22 @@ void Tasks::ReceiveFromMonTask(void *arg) {
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) {
             delete(msgRcv);
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            robot.Stop();
+            rt_mutex_release(&mutex_robot);
+            rt_sem_p(&sem_openComRobot, TM_INFINITE);
             exit(-1);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITHOUT_WD)) {
+            //Indicating that we are starting without WatchDog
+            rt_mutex_acquire(&mutex_watchDog, TM_INFINITE);
+            watchDog = false;
+            rt_mutex_release(&mutex_watchDog);
+            //start
             rt_sem_v(&sem_startRobot);
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) 
+        {
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||
@@ -275,7 +309,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_mutex_acquire(&mutex_move, TM_INFINITE);
             move = msgRcv->GetID();
             rt_mutex_release(&mutex_move);
-        }
+        } 
+        
         delete(msgRcv); // mus be deleted manually, no consumer
     }
 }

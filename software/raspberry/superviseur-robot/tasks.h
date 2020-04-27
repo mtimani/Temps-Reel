@@ -66,6 +66,8 @@ private:
     ComRobot robot;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+    //Our variables
+    bool watchDog = false;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -76,6 +78,9 @@ private:
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
+    //Our tasks
+    RT_TASK th_refreshWD;
+    RT_TASK th_batteryLevel;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -84,6 +89,7 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
+    RT_MUTEX mutex_watchDog;
 
     /**********************************************************************/
     /* Semaphores                                                         */

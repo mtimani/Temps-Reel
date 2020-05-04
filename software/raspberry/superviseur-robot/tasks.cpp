@@ -579,7 +579,6 @@ void Tasks::UpdateBatteryTask(void * arg) {
     
     //Variables
     Message * msgSend;
-    BatteryLevel bl = BATTERY_UNKNOWN;
     int rs;
     
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
@@ -603,14 +602,10 @@ void Tasks::UpdateBatteryTask(void * arg) {
            
            //Get the battery level update
            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-           bl = robot.GetBattery();
-           msgSend = robot.Write(bl);
+           msgSend = robot.Write(robot.GetBattery());
            rt_mutex_release(&mutex_robot);
            
-           if (bl == BATTERY_EMPTY) {
-               msgSend=MESSAGE_ANSWER_NACK;
-           }
-           
+           //Send the battery level update to the monitor
            rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
            monitor.Write(msgSend);
            rt_mutex_release(&mutex_monitor);

@@ -450,6 +450,8 @@ void Tasks::StartRobotTask(void *arg) {
 void Tasks::MoveTask(void *arg) {
     int rs;
     int cpMove;
+    Message* response;
+    int cpt;
     
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
@@ -474,8 +476,39 @@ void Tasks::MoveTask(void *arg) {
             cout << " move: " << cpMove;
             
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Write(new Message((MessageID)cpMove));
+            response = robot.Write(new Message((MessageID)cpMove));
             rt_mutex_release(&mutex_robot);
+            
+            //Error detection
+            if (response->CompareID(MESSAGE_ANSWER_ROBOT_ERROR)) {
+                //Incrementing the counter
+                rt_mutex_acquire(&mutex_error_count, TM_INFINITE);
+                error_count++;
+                cpt = error_count;
+                rt_mutex_release(&mutex_error_count);
+
+                cout << "Communication error" << endl << flush;
+
+                //If the number of errors exceeds 3
+                if (cpt>=3) {
+                    cout << "Restart" << endl << flush;
+                    // Send message to the monitor 
+                    Message m = MESSAGE_ANSWER_COM_ERROR ;
+                    rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+                    monitor.Write(&m);
+                    rt_mutex_release(&mutex_monitor);
+                    //Close the ComRobot communication
+                    rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+                    robot.Close();
+                    robot.Reset();
+                    rt_mutex_release(&mutex_robot);
+                }
+            } else {
+                //Error Count Reset back to 0
+                rt_mutex_acquire(&mutex_error_count, TM_INFINITE);
+                error_count = 0;
+                rt_mutex_release(&mutex_error_count);
+            }
         }
         cout << endl << flush;
     }
@@ -539,47 +572,6 @@ void Tasks::RefreshWDTask(void *arg)
         }
         cout << endl << flush;
     }
-}
-
-Message *Tasks::MessageRobot(Message *msg)
-{
-    Message* response;
-    int cpt;
-    //Message sending and answer receiving
-    response = robot.Write(msg);
-    
-    //If Error Message
-    if (response->CompareID(MESSAGE_ANSWER_ROBOT_ERROR)) {
-        //Incrementing the counter
-        rt_mutex_acquire(&mutex_error_count, TM_INFINITE);
-        error_count++;
-        cpt = error_count;
-        rt_mutex_release(&mutex_error_count);
-        
-        cout << "Communication error" << endl << flush;
-        
-        //If the number of errors exceeds 3
-        if (cpt>=3) {
-            cout << "Restart" << endl << flush;
-            // Send message to the monitor 
-            Message m = MESSAGE_ANSWER_COM_ERROR ;
-            rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
-            monitor.Write(&m);
-            rt_mutex_release(&mutex_monitor);
-            //Close the ComRobot communication
-            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Close();
-            robot.Reset();
-            rt_mutex_release(&mutex_robot);
-        }
-    } else {
-        //Error Count Reset back to 0
-        rt_mutex_acquire(&mutex_error_count, TM_INFINITE);
-        error_count = 0;
-        rt_mutex_release(&mutex_error_count);
-    }
-    
-    return response;
 }
 
 // Ours Tasks implementations

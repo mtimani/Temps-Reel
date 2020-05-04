@@ -170,13 +170,6 @@ private:
     void RefreshWDTask(void *arg);
     
     /**
-     * Send and receive messages from Robot
-     * @param msg Message
-     * @return 
-     */
-    Message* MessageRobot(Message *msg);
-    
-    /**
      * @brief Thread handling the battery status update
      */
     void UpdateBatteryTask(void * arg);

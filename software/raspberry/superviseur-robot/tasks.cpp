@@ -605,10 +605,14 @@ void Tasks::UpdateBatteryTask(void * arg) {
            msgSend = robot.Write(robot.GetBattery());
            rt_mutex_release(&mutex_robot);
            
-           //Send the battery level update to the monitor
-           rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
-           monitor.Write(msgSend);
-           rt_mutex_release(&mutex_monitor);
+           if(msgSend != NULL && !msgSend->CompareID(MESSAGE_ANSWER_ROBOT_TIMEOUT))
+           {
+               //Send the battery level update to the monitor
+                rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+                monitor.Write(msgSend);
+                rt_mutex_release(&mutex_monitor);
+           }
+           
         }
     }
 }

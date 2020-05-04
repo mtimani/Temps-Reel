@@ -63,7 +63,8 @@ GUI
 *.apk
 
 #private.xml
-/private.xml
+/software/raspberry/superviseur-robot/nbproject/private/private.xml
+/software/simulateur/nbproject/private/private.xml
 
 /software/raspberry/superviseur-robot/superviseur/dist/
 /software/raspberry/testeur/testeur/build/

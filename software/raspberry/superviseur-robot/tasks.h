@@ -81,6 +81,7 @@ private:
     RT_TASK th_move;
     //Our tasks
     RT_TASK th_refreshWD;
+    RT_TASK th_disconnectServer;
     RT_TASK th_batteryLevel;
     RT_TASK th_actionCamera;
     RT_TASK th_comCamera;
@@ -178,6 +179,11 @@ private:
      * @brief Thread handling the communication with the camera
      */
     void ComCameraTask(void * arg);
+    
+    /**
+     * @brief 
+     */
+    void DisconnectServerTask(void * arg);
     
     
     /**

@@ -556,7 +556,7 @@ void Tasks::RefreshWDTask(void *arg)
     rt_sem_p(&sem_refreshWD, TM_INFINITE);
     
     //Beginning of the Task
-    rt_task_set_periodic(&th_refreshWD, TM_NOW, 100000000);
+    rt_task_set_periodic(&th_refreshWD, TM_NOW, 1000000000);
     //rt_task_set_periodic(NULL, TM_NOW, 100000000);
     
     while(1) {
@@ -575,7 +575,43 @@ void Tasks::RefreshWDTask(void *arg)
 }
 
 // Ours Tasks implementations
-void Tasks::UpdateBatteryTask(void * arg) {}
+void Tasks::UpdateBatteryTask(void * arg) {
+    
+    //Variables
+    Message * msgSend;
+    int rs;
+    
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    
+    //Synchronization barrier, awaiting for all the tasks to start
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    rt_sem_p(&sem_batteryLevel, TM_INFINITE);
+    
+    //Task
+    rt_task_set_periodic(&th_batteryLevel, TM_NOW, 500000000);
+    
+    while (1) {
+        rt_task_wait_period(NULL);
+        
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        rs = robotStarted;
+        rt_mutex_release(&mutex_robotStarted);
+        
+        if (rs) {
+           cout << "Update battery" << endl << flush;
+           
+           //Get the battery level update
+           rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+           msgSend = robot.Write(robot.GetBattery());
+           rt_mutex_release(&mutex_robot);
+           
+           //Send the battery level update to the monitor
+           rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+           monitor.Write(msgSend);
+           rt_mutex_release(&mutex_monitor);
+        }
+    }
+}
 
 void Tasks::ActionCameraTask(void * arg) {
     

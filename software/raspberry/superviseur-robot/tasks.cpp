@@ -326,10 +326,14 @@ void Tasks::ReceiveFromMonTask(void *arg) {
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) {
             delete(msgRcv);
-            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Stop();
-            rt_mutex_release(&mutex_robot);
-            rt_sem_p(&sem_openComRobot, TM_INFINITE);
+            cout << "Perte de connexion avec le moniteur";
+            rt_mutex_acquire(&mutex_move, TM_INFINITE);
+            move = MESSAGE_ROBOT_STOP;
+            rt_mutex_release(&mutex_move);
+            rt_sem_v(&sem_closeRobot);
+            //////disconnect Server
+
+            
             exit(-1);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
@@ -400,7 +404,7 @@ void Tasks::OpenComRobot(void *arg) {
 /**
  * @brief Thread starting the communication with the robot.
  */
-void Tasks::StartRobotTask(void *arg) {
+    void Tasks::StartRobotTask(void *arg) {
     
     bool wd;
     
@@ -634,3 +638,9 @@ void Tasks::ActionCameraTask(void * arg) {
 void Tasks::ComCameraTask(void * arg) {
     
 }
+void Tasks::CloseRobotTask(void * arg) {
+    rt_sem_(&sem_closeRobot, TM_INFINITE);
+   
+  
+}
+

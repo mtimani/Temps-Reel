@@ -70,6 +70,10 @@ private:
     bool watchDog = false;
     int error_count = 0;
     
+    
+    
+    
+    
     /**********************************************************************/
     /* Tasks                                                              */
     /**********************************************************************/
@@ -85,6 +89,7 @@ private:
     RT_TASK th_batteryLevel;
     RT_TASK th_actionCamera;
     RT_TASK th_comCamera;
+    RT_TASK th_closeRobot;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -107,7 +112,7 @@ private:
     //Our Semaphores
     RT_SEM sem_refreshWD;
     RT_SEM sem_batteryLevel;
-
+    RT_SEM sem_closeRobot;
     /**********************************************************************/
     /* Message queues                                                     */
     /**********************************************************************/
@@ -190,7 +195,17 @@ private:
      * @brief Thread handling the actions with the camera
      */
     void ActionCameraTask(void * arg);
-
+    
+    
+     /**
+     * @brief Thread handling the actions with the camera
+     */
+    
+    
+    void CloseRobotTask(void * arg);
+/**
+     * @brief Thread closing stopping Robot 
+     */
 };
 
 #endif // __TASKS_H__ 

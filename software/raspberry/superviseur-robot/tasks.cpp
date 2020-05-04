@@ -152,6 +152,11 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     
+    if (err = rt_task_create(&th_disconnectServer, "th_disconnectServer", 0, PRIORITY_TSERVER, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     if (err = rt_task_create(&th_actionCamera, "th_actionCamera", 0, PRIORITY_TCAMERA, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
@@ -615,6 +620,10 @@ void Tasks::UpdateBatteryTask(void * arg) {
            
         }
     }
+}
+
+void Tasks::DisconnectServerTask(void * arg){
+    
 }
 
 void Tasks::ActionCameraTask(void * arg) {

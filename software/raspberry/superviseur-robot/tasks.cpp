@@ -626,8 +626,9 @@ void Tasks::UpdateBatteryTask(void * arg) {
     }
 }
 
+
 void Tasks::DisconnectServerTask(void * arg){
-    
+  
 }
 
 void Tasks::ActionCameraTask(void * arg) {

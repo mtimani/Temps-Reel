@@ -69,6 +69,8 @@ private:
     //Our variables
     bool watchDog = false;
     int error_count = 0;
+    Camera * cam;
+    Arena arena;
     
     
     
@@ -87,8 +89,8 @@ private:
     RT_TASK th_refreshWD;
     RT_TASK th_disconnectServer;
     RT_TASK th_batteryLevel;
-    RT_TASK th_actionCamera;
     RT_TASK th_comCamera;
+    RT_TASK th_actionCamera;
     RT_TASK th_closeRobot;
     
     /**********************************************************************/
@@ -113,6 +115,7 @@ private:
     RT_SEM sem_refreshWD;
     RT_SEM sem_batteryLevel;
     RT_SEM sem_closeRobot;
+    RT_SEM sem_camera;
     /**********************************************************************/
     /* Message queues                                                     */
     /**********************************************************************/

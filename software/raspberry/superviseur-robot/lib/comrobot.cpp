@@ -137,13 +137,13 @@ int ComRobot::Close() {
 /**
  * Send a message to robot
  * @param msg Message to send to robot
- * @return 1 if success, 0 otherwise
+ * @return NULL when the function failed to open the descriptor, a object Message MESSAGE_ANSWER_ROBOT_TIMEOUT when the monitor do not respond, or the respond an object Message corresponding to the robot's response
  * @attention Message is destroyed (delete) after being sent. You do not need to delete it yourself
  * @attention Write is blocking until message is written into buffer (linux side)
  * @warning Write is not thread save : check that multiple tasks can't access this method simultaneously  
  */
 Message *ComRobot::Write(Message* msg) {
-    Message *msgAnswer;
+    Message *msgAnswer = NULL;
     string s;
 
     if (this->fd != -1) {

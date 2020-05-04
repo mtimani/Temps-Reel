@@ -640,7 +640,7 @@ void Tasks::ActionCameraTask(void * arg) {
     
 }
 
-void Tasks::CloseRobotTask(void * arg) {   
-  
+void Tasks::CloseRobotTask(void * arg) {
+    rt_sem_p(&sem_closeRobot, TM_INFINITE);
 }
 

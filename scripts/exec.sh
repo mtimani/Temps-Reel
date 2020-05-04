@@ -27,13 +27,13 @@ else
         fi
     elif [ $# -eq 2 ]; then 
         if [ $1 = "-g" ]; then
-            if [ $1 = "super" ]; then
+            if [ $2 = "super" ]; then
             cd ../software/raspberry/superviseur-robot/dist/Debug__PC_/GNU-Linux/
             sudo  gdb superviseur-robot
-        elif [ $1 = "simu" ]; then
+        elif [ $2 = "simu" ]; then
             cd ../software/simulateur/dist/Debug/GNU-Linux/
             sudo gdb simulateur
-        elif [ $1 = "moni" ]; then
+        elif [ $2 = "moni" ]; then
             cd ../software/monitor/monitor/
             sudo gdb monitor
         else

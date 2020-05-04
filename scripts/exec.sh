@@ -19,7 +19,7 @@ else
         cd ../software/simulateur/dist/Debug/GNU-Linux/simulateur
         sudo ./simulateur
     elif [ $1 = "moni" ]; then
-        cd ../software/monitor/monitor/monitor
+        cd ../software/monitor/monitor/
         sudo ./monitor
     else
         usage

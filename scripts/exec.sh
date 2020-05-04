@@ -8,7 +8,7 @@ usage(){
 curr_path=`pwd`
 curr_dir=`basename $curr_path`
 
-if [ $# -ne 1 -o $curr_dir!="scripts" ]; then
+if [ $# -ne 1 -o $curr_dir != "scripts" ]; then
     usage
 else
     if [ $1 = "super" ]; then

@@ -2,7 +2,7 @@
 
 usage(){
     echo "usage:"
-    echo "you need to be in the \"script\" folder"
+    echo "you need to be in the \"scripts\" folder"
     echo "./exec.sh [-g] simu|moni|super"
     echo "-g : launch with gdb"
 }  

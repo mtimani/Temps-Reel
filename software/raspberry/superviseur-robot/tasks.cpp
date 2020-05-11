@@ -482,7 +482,7 @@ void Tasks::MoveTask(void *arg) {
             cpMove = move;
             rt_mutex_release(&mutex_move);
             
-            cout << " move: " << cpMove;
+            cout << " move: " << cpMove << endl;
             
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             response = robot.Write(new Message((MessageID)cpMove));

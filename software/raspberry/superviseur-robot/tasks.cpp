@@ -595,12 +595,15 @@ void Tasks::UpdateBatteryTask(void * arg) {
     
     //Synchronization barrier, awaiting for all the tasks to start
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    rt_sem_p(&sem_batteryLevel, TM_INFINITE);
+    //rt_sem_p(&sem_batteryLevel, TM_INFINITE);
     
     //Task
     rt_task_set_periodic(&th_batteryLevel, TM_NOW, 500000000);
     
+    //cout << "Battery started" << endl;
+    
     while (1) {
+        //cout << "Battery started while" << endl;
         rt_task_wait_period(NULL);
         
         //Verify if the Robot is active
@@ -622,8 +625,9 @@ void Tasks::UpdateBatteryTask(void * arg) {
                 rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
                 monitor.Write(msgSend);
                 rt_mutex_release(&mutex_monitor);
+           } else {
+               cout << "Response unknown \n" << endl;
            }
-           
         }
     }
 }

@@ -27,7 +27,7 @@
 #define PRIORITY_TSTARTROBOT 20
 #define PRIORITY_TCAMERA 21
 #define PRIORITY_TBATTERYLEVEL 20
-#define PRIORITY_TREFRESHWD 20
+#define PRIORITY_TREFRESHWD 99
 
 /*
  * Some remarks:
@@ -430,6 +430,7 @@ void Tasks::OpenComRobot(void *arg) {
             cout << "Start robot with watchdog (";
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             msgSend = robot.Write(robot.StartWithWD());
+            rt_sem_v(&sem_refreshWD);
             rt_mutex_release(&mutex_robot);
             cout << msgSend->GetID();
             cout << ")" << endl;
@@ -563,11 +564,12 @@ void Tasks::RefreshWDTask(void *arg)
     int rs_status;
     //Synchronization barrier
     //rt_sem_p(&sem_barrier, TM_INFINITE);
-    //rt_sem_p(&sem_refreshWD, TM_INFINITE);
+    rt_sem_p(&sem_refreshWD, TM_INFINITE);
     
     //Beginning of the Task
-    rt_task_set_periodic(&th_refreshWD, TM_NOW, 1000000000);
-    //rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    //rt_task_set_periodic(&th_refreshWD, TM_NOW, 955000000);
+    rt_task_set_periodic(&th_refreshWD, TM_NOW, rt_timer_ns2ticks(1000000000));
+   
     
     while(1) {
         rt_task_wait_period(NULL);
@@ -598,7 +600,7 @@ void Tasks::UpdateBatteryTask(void * arg) {
     //rt_sem_p(&sem_batteryLevel, TM_INFINITE);
     
     //Task
-    rt_task_set_periodic(&th_batteryLevel, TM_NOW, 500000000);
+    rt_task_set_periodic(&th_batteryLevel, TM_NOW, 50000000);
     
     //cout << "Battery started" << endl;
     

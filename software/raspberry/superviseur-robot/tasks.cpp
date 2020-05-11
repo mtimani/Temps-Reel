@@ -219,19 +219,19 @@ void Tasks::Run() {
     }
     
     if (err = rt_task_start(&th_batteryLevel, (void(*)(void*)) & Tasks::UpdateBatteryTask, this)) {
-        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        cerr << "Error task start (bat_level): " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
     
-    if (err = rt_task_start(&th_comCamera, (void(*)(void*)) & Tasks::ComCameraTask, this)) {
-        cerr << "Error task start: " << strerror(-err) << endl << flush;
+    /*if (err = rt_task_start(&th_comCamera, (void(*)(void*)) & Tasks::ComCameraTask, this)) {
+        cerr << "Error task start (comCamera): " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
     
     if (err = rt_task_start(&th_actionCamera, (void(*)(void*)) & Tasks::ActionCameraTask, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }
+    }*/
     
     cout << "Tasks launched" << endl << flush;
 }

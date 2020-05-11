@@ -34,6 +34,11 @@
 #include "camera.h"
 #include "img.h"
 
+/*Camera actionTypes*/
+#define CAMERA_FIND_POSITION 0
+#define CAMERA_STREAM 1
+#define CAMERA_ASK_ARENA 2
+
 using namespace std;
 
 class Tasks {
@@ -69,7 +74,11 @@ private:
     //Our variables
     bool watchDog = false;
     int error_count = 0;
-    Camera * cam;
+    bool continueStream = false;
+    int actionType = CAMERA_STREAM;
+    int cameraCommand;
+    RTIME period;
+    Camera cam;
     Arena arena;
     
     
@@ -103,6 +112,11 @@ private:
     //Our Mutexes
     RT_MUTEX mutex_watchDog;
     RT_MUTEX mutex_error_count;
+    RT_MUTEX mutex_camera;
+    RT_MUTEX mutex_continueStream;
+    RT_MUTEX mutex_actionType;
+    RT_MUTEX mutex_cameraCommand;
+    RT_MUTEX mutex_period;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -116,6 +130,9 @@ private:
     RT_SEM sem_batteryLevel;
     RT_SEM sem_closeRobot;
     RT_SEM sem_camera;
+    RT_SEM sem_comCamera;
+    RT_SEM sem_startStream;
+    RT_SEM sem_arenaResult;
     /**********************************************************************/
     /* Message queues                                                     */
     /**********************************************************************/

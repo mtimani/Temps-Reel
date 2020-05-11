@@ -83,6 +83,26 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_mutex_create(&mutex_camera, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_continueStream, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_actionType, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_cameraCommand, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_period, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Mutexes created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -109,6 +129,22 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_sem_create(&sem_batteryLevel, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_camera, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_comCamera, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_startStream, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_arenaResult, NULL, 0, S_FIFO)) {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -157,7 +193,7 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     
-    if (err = rt_task_create(&th_actionCamera, "th_comCamera", 0, PRIORITY_TCAMERA, 0)) {
+    if (err = rt_task_create(&th_comCamera, "th_comCamera", 0, PRIORITY_TCAMERA, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -223,7 +259,7 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
     
-    /*if (err = rt_task_start(&th_comCamera, (void(*)(void*)) & Tasks::ComCameraTask, this)) {
+    if (err = rt_task_start(&th_comCamera, (void(*)(void*)) & Tasks::ComCameraTask, this)) {
         cerr << "Error task start (comCamera): " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -231,7 +267,7 @@ void Tasks::Run() {
     if (err = rt_task_start(&th_actionCamera, (void(*)(void*)) & Tasks::ActionCameraTask, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }*/
+    }
     
     cout << "Tasks launched" << endl << flush;
 }
@@ -362,7 +398,18 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_mutex_acquire(&mutex_move, TM_INFINITE);
             move = msgRcv->GetID();
             rt_mutex_release(&mutex_move);
-        } 
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA) ||
+                msgRcv->CompareID(MESSAGE_CAM_OPEN) ||
+                msgRcv->CompareID(MESSAGE_CAM_CLOSE) ||
+                msgRcv->CompareID(MESSAGE_CAM_ARENA_CONFIRM) ||
+                msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)) {
+            
+            rt_mutex_acquire(&mutex_cameraCommand, TM_INFINITE);
+            cameraCommand = msgRcv->GetID();
+            rt_mutex_release(&mutex_cameraCommand);
+            
+            rt_sem_v(&sem_comCamera);
+        }
         
         delete(msgRcv); // mus be deleted manually, no consumer
     }
@@ -504,9 +551,7 @@ void Tasks::MoveTask(void *arg) {
                     cout << "Restart" << endl << flush;
                     // Send message to the monitor 
                     Message m = MESSAGE_ANSWER_COM_ERROR ;
-                    rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
-                    monitor.Write(&m);
-                    rt_mutex_release(&mutex_monitor);
+                    WriteInQueue(&q_messageToMon, &m);
                     //Close the ComRobot communication
                     rt_mutex_acquire(&mutex_robot, TM_INFINITE);
                     robot.Close();
@@ -600,7 +645,7 @@ void Tasks::UpdateBatteryTask(void * arg) {
     //rt_sem_p(&sem_batteryLevel, TM_INFINITE);
     
     //Task
-    rt_task_set_periodic(&th_batteryLevel, TM_NOW, 50000000);
+    rt_task_set_periodic(&th_batteryLevel, TM_NOW, rt_timer_ns2ticks(50000000));
     
     //cout << "Battery started" << endl;
     
@@ -624,9 +669,7 @@ void Tasks::UpdateBatteryTask(void * arg) {
            if(msgSend != NULL && !msgSend->CompareID(MESSAGE_ANSWER_ROBOT_TIMEOUT))
            {
                //Send the battery level update to the monitor
-                rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
-                monitor.Write(msgSend);
-                rt_mutex_release(&mutex_monitor);
+                WriteInQueue(&q_messageToMon, msgSend);
            } else {
                cout << "Response unknown \n" << endl;
            }
@@ -640,6 +683,103 @@ void Tasks::DisconnectServerTask(void * arg){
 }
 
 void Tasks::ComCameraTask(void * arg) {
+    
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    
+    //Synchronization barrier, awaiting for all the tasks to start
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    rt_sem_p(&sem_comCamera, TM_INFINITE);
+    
+    int auxCameraCommand;
+    bool status;
+    
+    rt_mutex_acquire(&mutex_cameraCommand, TM_INFINITE);
+    auxCameraCommand = cameraCommand;
+    rt_mutex_release(&mutex_cameraCommand);
+    
+    Message m;
+    
+    switch (auxCameraCommand) {
+        
+        case MESSAGE_CAM_OPEN:
+            
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            status = cam.Open();
+            rt_mutex_release(&mutex_camera);
+
+            if (status) {
+                m = MESSAGE_ANSWER_ACK ;
+                WriteInQueue(&q_messageToMon, &m);
+
+                rt_mutex_acquire(&mutex_continueStream, TM_INFINITE);
+                continueStream = true ;
+                rt_mutex_release(&mutex_continueStream);
+
+                rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+                actionType = CAMERA_STREAM ;
+                rt_mutex_release(&mutex_actionType);
+
+                rt_mutex_acquire(&mutex_period, TM_INFINITE);
+                period = rt_timer_ns2ticks(100000000);
+                rt_mutex_release(&mutex_period);
+
+                rt_sem_v(&sem_startStream);
+            } else {
+                m = MESSAGE_ANSWER_NACK ;
+                WriteInQueue(&q_messageToMon, &m);
+            }
+            break;
+            
+        case MESSAGE_CAM_CLOSE:
+            
+            m = MESSAGE_ANSWER_ACK ;
+            WriteInQueue(&q_messageToMon, &m);
+
+            rt_mutex_acquire(&mutex_continueStream, TM_INFINITE);
+            continueStream = false ;
+            rt_mutex_release(&mutex_continueStream);
+            
+            break;
+            
+        case MESSAGE_CAM_ASK_ARENA:
+            
+            rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+            actionType = CAMERA_ASK_ARENA ;
+            rt_mutex_release(&mutex_actionType);
+            
+            break;
+            
+        case MESSAGE_CAM_ARENA_CONFIRM:
+            
+            rt_sem_v(&sem_arenaResult);
+            
+            break;
+            
+        case MESSAGE_CAM_ARENA_INFIRM:
+            
+            rt_sem_v(&sem_arenaResult);
+            
+            break;
+            
+        case MESSAGE_CAM_POSITION_COMPUTE_START:
+            
+            rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+            actionType = CAMERA_FIND_POSITION ;
+            rt_mutex_release(&mutex_actionType);
+            
+            break;
+            
+        case MESSAGE_CAM_POSITION_COMPUTE_STOP:
+            
+            rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+            actionType = CAMERA_STREAM ;
+            rt_mutex_release(&mutex_actionType);
+            
+            break;
+            
+        default:
+            break;
+    }
     
 }
 

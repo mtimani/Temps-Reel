@@ -562,7 +562,8 @@ void Tasks::RefreshWDTask(void *arg)
 {
     int rs_status;
     //Synchronization barrier
-    rt_sem_p(&sem_refreshWD, TM_INFINITE);
+    //rt_sem_p(&sem_barrier, TM_INFINITE);
+    //rt_sem_p(&sem_refreshWD, TM_INFINITE);
     
     //Beginning of the Task
     rt_task_set_periodic(&th_refreshWD, TM_NOW, 1000000000);
@@ -570,7 +571,7 @@ void Tasks::RefreshWDTask(void *arg)
     
     while(1) {
         rt_task_wait_period(NULL);
-        cout << "WatchDog Refresh";
+        cout << "WatchDog Refresh" << endl;
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
         rs_status = robotStarted;
         rt_mutex_release(&mutex_robotStarted);

@@ -103,6 +103,14 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_mutex_create(&mutex_arena, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_arenaConfirmed, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Mutexes created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -193,7 +201,7 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     
-    if (err = rt_task_create(&th_comCamera, "th_comCamera", 0, PRIORITY_TCAMERA, 0)) {
+    /*if (err = rt_task_create(&th_comCamera, "th_comCamera", 0, PRIORITY_TCAMERA, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -201,7 +209,7 @@ void Tasks::Init() {
     if (err = rt_task_create(&th_actionCamera, "th_actionCamera", 0, PRIORITY_TCAMERA, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }
+    }*/
     
     cout << "Tasks created successfully" << endl << flush;
 
@@ -259,7 +267,7 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
     
-    if (err = rt_task_start(&th_comCamera, (void(*)(void*)) & Tasks::ComCameraTask, this)) {
+    /*if (err = rt_task_start(&th_comCamera, (void(*)(void*)) & Tasks::ComCameraTask, this)) {
         cerr << "Error task start (comCamera): " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -267,7 +275,7 @@ void Tasks::Run() {
     if (err = rt_task_start(&th_actionCamera, (void(*)(void*)) & Tasks::ActionCameraTask, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }
+    }*/
     
     cout << "Tasks launched" << endl << flush;
 }
@@ -751,11 +759,19 @@ void Tasks::ComCameraTask(void * arg) {
             
         case MESSAGE_CAM_ARENA_CONFIRM:
             
+            rt_mutex_acquire(&mutex_arenaConfirmed, TM_INFINITE);
+            arenaConfirmed = true ;
+            rt_mutex_release(&mutex_arenaConfirmed);
+            
             rt_sem_v(&sem_arenaResult);
             
             break;
             
         case MESSAGE_CAM_ARENA_INFIRM:
+            
+            rt_mutex_acquire(&mutex_arenaConfirmed, TM_INFINITE);
+            arenaConfirmed = false ;
+            rt_mutex_release(&mutex_arenaConfirmed);
             
             rt_sem_v(&sem_arenaResult);
             
@@ -784,6 +800,151 @@ void Tasks::ComCameraTask(void * arg) {
 }
 
 void Tasks::ActionCameraTask(void * arg) {
+    
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    
+    //Synchronization barrier, awaiting for all the tasks to start
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    rt_sem_p(&sem_startStream, TM_INFINITE);
+    
+    //Task
+    rt_mutex_acquire(&mutex_period, TM_INFINITE);
+    rt_task_set_periodic(NULL, TM_NOW, period); 
+    rt_mutex_release(&mutex_period);
+    
+    bool auxContinueStream;
+    int auxActionType;
+    Arena auxArena;
+    
+    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+    Img img = cam.Grab();
+    rt_mutex_release(&mutex_camera);
+    
+    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+    Img imgArena = cam.Grab();
+    rt_mutex_release(&mutex_camera);
+    
+    bool auxArenaConfirmed;
+    
+    Position position;
+    
+    while (1) {
+        
+        rt_mutex_acquire(&mutex_continueStream, TM_INFINITE);
+        auxContinueStream = continueStream;
+        rt_mutex_release(&mutex_continueStream);
+        
+        if (auxContinueStream) {
+            
+            rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+            auxActionType = actionType;
+            rt_mutex_release(&mutex_actionType);
+            
+            switch(auxActionType) {
+                
+                case CAMERA_FIND_POSITION:
+                    
+                    rt_task_set_periodic(NULL, TM_NOW, 0); 
+                    
+                    rt_mutex_acquire(&mutex_arena, TM_INFINITE);
+                    auxArena = arena;
+                    rt_mutex_release(&mutex_arena);
+                    
+                    if (auxArena.IsEmpty()) {
+                        
+                        WriteInQueue(&q_messageToMon, new MessagePosition());
+                        
+                    } else {
+                       
+                        rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                        img = cam.Grab();
+                        rt_mutex_release(&mutex_camera);
+                        
+                        position = img.SearchRobot(auxArena).front();
+                        
+                        WriteInQueue(&q_messageToMon, new MessagePosition(MESSAGE_CAM_POSITION,position));
+                        
+                        rt_task_set_periodic(NULL, TM_NOW, period);
+                        
+                        rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+                        actionType = CAMERA_STREAM;
+                        rt_mutex_release(&mutex_actionType);
+                        
+                    }
+                    
+                    break;
+                    
+                case CAMERA_STREAM:
+                    
+                    rt_task_wait_period(NULL);
+                    
+                    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                    img = cam.Grab();
+                    rt_mutex_release(&mutex_camera);
+                    
+                    WriteInQueue(&q_messageToMon, new MessageImg(MESSAGE_CAM_IMAGE,&img));
+
+                    break;
+                    
+                case CAMERA_ASK_ARENA:
+                    
+                    rt_task_set_periodic(NULL, TM_NOW, 0);
+                    
+                    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                    imgArena = cam.Grab();
+                    rt_mutex_release(&mutex_camera);
+                    
+                    rt_mutex_acquire(&mutex_arena, TM_INFINITE);
+                    arena = imgArena.SearchArena();
+                    auxArena = arena;
+                    rt_mutex_release(&mutex_arena);
+                    
+                    if (auxArena.IsEmpty()) {
+                        
+                        WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_NACK));
+                        
+                        rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+                        actionType = CAMERA_STREAM;
+                        rt_mutex_release(&mutex_actionType);
+                        
+                    } else {
+                        
+                        imgArena.DrawArena(auxArena);
+                        
+                        WriteInQueue(&q_messageToMon, new MessageImg(MESSAGE_CAM_IMAGE,&imgArena));
+                        
+                        rt_sem_p(&sem_arenaResult, TM_INFINITE);
+                        
+                        rt_mutex_acquire(&mutex_arenaConfirmed, TM_INFINITE);
+                        auxArenaConfirmed = arenaConfirmed ;
+                        rt_mutex_release(&mutex_arenaConfirmed);
+                        
+                        if (auxArenaConfirmed) {
+                            cout << "Arena saved" << endl;
+                        }
+                        
+                        rt_task_set_periodic(NULL, TM_NOW, period);
+                        
+                        rt_mutex_acquire(&mutex_actionType, TM_INFINITE);
+                        actionType = CAMERA_STREAM;
+                        rt_mutex_release(&mutex_actionType);
+                            
+                    }
+                    
+                    break;
+                
+                default:
+                    break;
+                
+            }
+            
+        } else {
+            
+            return;
+            
+        }
+        
+    }
     
 }
 

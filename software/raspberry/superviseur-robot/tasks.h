@@ -80,6 +80,7 @@ private:
     RTIME period;
     Camera cam;
     Arena arena;
+    bool arenaConfirmed = false;
     
     
     
@@ -117,6 +118,8 @@ private:
     RT_MUTEX mutex_actionType;
     RT_MUTEX mutex_cameraCommand;
     RT_MUTEX mutex_period;
+    RT_MUTEX mutex_arena;
+    RT_MUTEX mutex_arenaConfirmed;
 
     /**********************************************************************/
     /* Semaphores                                                         */

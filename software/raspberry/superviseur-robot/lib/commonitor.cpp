@@ -161,7 +161,7 @@ void ComMonitor::Write(Message *msg) {
 /**
  * Receive a message from monitor
  * 
- * @return Message received from monitor
+ * @return Message received from monitor or NULL if an error occurs
  * @attention Message provided is produced by the method. You must delete it when you are done using it
  * @warning Read is not thread safe : check that multiple tasks can't access this method simultaneously  
  */
@@ -170,7 +170,7 @@ Message *ComMonitor::Read() {
     string s;
     char data;
     bool endReception = false;
-    Message *msg;
+    Message *msg = NULL;
 
     // Call user method before read
     Read_Pre();
@@ -178,7 +178,8 @@ Message *ComMonitor::Read() {
     if (clientID > 0) {
         while (!endReception) {
             if ((length = recv(clientID, (void*) &data, 1, MSG_WAITALL)) > 0) {
-                //cout << "length = " << to_string(length) << endl << flush;
+                cout << "length = " << to_string(length) << endl << flush;
+                cout << errno << endl;
                 if (data != '\n') {
                     s += data;
                 } else endReception = true;

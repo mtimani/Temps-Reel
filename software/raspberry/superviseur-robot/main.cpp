@@ -17,7 +17,7 @@
 
 #include <iostream>
 #include <unistd.h>
-
+#include <csignal>
 #include <sys/mman.h>
 
 #ifdef __WITH_PTHREAD__
@@ -26,9 +26,23 @@
 #include "tasks.h"
 #endif // __WITH_PTHREAD__
 
+Tasks* ptr_tasks = NULL;
+
+void sigIntHandler( int signum ){
+    cout << endl << "SIGINT received " << endl;
+    if(ptr_tasks != NULL){
+        ptr_tasks->Quit();
+        exit(signum);
+    }
+    else
+        cout << "Too speed, retry" << endl;
+        //    
+}
+
+
 int main(int argc, char **argv) {
     Tasks tasks;
-    
+    ptr_tasks = &tasks;
     //Lock the memory to avoid memory swapping for this program
     mlockall(MCL_CURRENT | MCL_FUTURE);
 
@@ -36,13 +50,11 @@ int main(int argc, char **argv) {
     cout<<"#      DE STIJL PROJECT         #"<<endl;
     cout<<"#################################"<<endl;
 
+    //signal (SIGINT, sigIntHandler);
+    
     tasks.Init();
     tasks.Run();
     tasks.Join();
-    
-    tasks.Stop();
-    
-    //tasks.Run();
 
     return 0;
 }

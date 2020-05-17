@@ -103,6 +103,7 @@ int ComRobot::Open(string usart) {
     if (connect(sock, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0) {
         return -1;
     }
+    //this->fd = sock;
     return 1;
 #else
 

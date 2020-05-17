@@ -58,6 +58,12 @@ public:
      */
     void Join();
     
+    /**
+     * @brief SIGINT handler for proper release of ressources
+     * @param 
+     */
+    void Quit();
+    
 private:
     /**********************************************************************/
     /* Shared data                                                        */
@@ -71,6 +77,9 @@ private:
     int error_count = 0;
     Camera * cam;
     Arena arena;
+    bool reset = false;
+    bool openComRobot_alive = false;
+    bool startRobot_alive = false;
     
     
     
@@ -87,7 +96,7 @@ private:
     RT_TASK th_move;
     //Our tasks
     RT_TASK th_refreshWD;
-    RT_TASK th_disconnectServer;
+    RT_TASK th_reset;
     RT_TASK th_batteryLevel;
     RT_TASK th_comCamera;
     RT_TASK th_actionCamera;
@@ -103,6 +112,7 @@ private:
     //Our Mutexes
     RT_MUTEX mutex_watchDog;
     RT_MUTEX mutex_error_count;
+    RT_MUTEX mutex_reset;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -111,11 +121,13 @@ private:
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
-    //Our Semaphores
     RT_SEM sem_refreshWD;
-    RT_SEM sem_batteryLevel;
+    RT_SEM sem_otherComRobot;
     RT_SEM sem_closeRobot;
     RT_SEM sem_camera;
+    //RT_SEM sem_disconnectServer;
+    RT_SEM sem_reset;
+
     /**********************************************************************/
     /* Message queues                                                     */
     /**********************************************************************/
@@ -160,6 +172,11 @@ private:
     /* Queue services                                                     */
     /**********************************************************************/
     /**
+     * Flush all the messages in a given queue
+     * @param queue Queue identifier
+     */
+    void FlushQueue(RT_QUEUE *queue);
+    /**
      * Write a message in a given queue
      * @param queue Queue identifier
      * @param msg Message to be stored
@@ -189,9 +206,9 @@ private:
     void ComCameraTask(void * arg);
     
     /**
-     * @brief 
+     * @brief Handle the lost connection with the robot after sending a message
      */
-    void DisconnectServerTask(void * arg);
+    void MessageRobot(Message * msg);
     
     
     /**
@@ -206,9 +223,16 @@ private:
     
     
     void CloseRobotTask(void * arg);
-/**
+    /**
      * @brief Thread closing stopping Robot 
      */
+    
+    void ResetTask(void * arg);
+    /**
+     * @brief Thread closing stopping Robot 
+     */
+   
+    
 };
 
 #endif // __TASKS_H__ 

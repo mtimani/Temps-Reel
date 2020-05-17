@@ -249,13 +249,13 @@ int main(int argc, char const *argv[]) {
                     e = (e / 1000000) % 1000;
                     if (isWD) {
                         if ((e < 50) || (e > 950)) {
-                            cout << ">>> Just in time for a reload " << e << "ms" << endl;
+                            cout << ">>> \e[31mJust in time for a reload " << e << "ms\e[0m" << endl;
                             last_call = t;
                             status = 0;
                             s += LABEL_ROBOT_OK;
                         } else {
                             status++;
-                            cout << ">>> You missed the date, -1 point " << e << "ms (" << status << ")" << endl;
+                            cout << ">>> \e[31You missed the date, -1 point " << e << "ms (" << status << ")\e[0m" << endl;
 
                             s += LABEL_ROBOT_UNKNOWN_COMMAND;
                         }
@@ -279,7 +279,7 @@ int main(int argc, char const *argv[]) {
                     break;
                 default:
                     //msg = new Message(MESSAGE_ANSWER_ROBOT_ERROR);
-                    cerr << "[" << __PRETTY_FUNCTION__ << "] Unknown message received from robot (" << buffer << ")" << endl << flush;
+                    cerr << "[" << "main.cpp" << "] Unknown message received from superviseur (" << buffer << ")" << endl << flush;
             }
             simulate_transmission_time();
             send(new_socket, s.c_str(), s.length(), 0);

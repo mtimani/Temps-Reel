@@ -82,6 +82,8 @@ public:
      */
     virtual void Write_Pre() {
     }
+    
+        void print_trace(void);
 
     /**
      * Function called at end of Write method

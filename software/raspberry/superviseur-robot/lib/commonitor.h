@@ -44,6 +44,13 @@ public:
     virtual ~ComMonitor() {}
     
     /**
+     * Check the life of the monitor
+     * 
+     * @return 1 if monitor is alive 0 else
+     */
+    int isAlive();
+    
+    /**
      * Create a server and open a socket over TCP
      * 
      * @param port Port used for communication
@@ -51,6 +58,11 @@ public:
      * @throw std::runtime_error if it fails
      */
     int Open(int port);
+    
+    /**
+     * Flush the receiving buffer of the socket 
+     */
+    void FlushReceivBuffer();
     
     /**
      * Close socket and server
@@ -106,6 +118,10 @@ public:
      */
     virtual void Read_Post() {}
 protected:
+    /**
+     
+     */
+    
     /**
      * Socket descriptor
      */

@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>  
-
+#include <execinfo.h>
 #include <string>
 #include <stdexcept>
 
@@ -125,12 +125,29 @@ int ComRobot::Open(string usart) {
     return fd;
 #endif
 }
+void ComRobot::print_trace (void)
+{
+  void *array[10];
+  size_t size;
+  char **strings;
+  size_t i;
 
+  size = backtrace (array, 10);
+  strings = backtrace_symbols (array, size);
+
+  printf ("Obtained %zd stack frames.\n", size);
+
+  for (i = 0; i < size; i++)
+     printf ("%s\n", strings[i]);
+
+  free (strings);
+}
 /**
  * Close serial link
  * @return Success if above 0, failure if below 0
  */
 int ComRobot::Close() {
+    shutdown(fd, SHUT_RDWR);
     return close(fd);
 }
 
@@ -145,22 +162,29 @@ int ComRobot::Close() {
 Message *ComRobot::Write(Message* msg) {
     Message *msgAnswer = NULL;
     string s;
-
+    ssize_t snd;
     if (this->fd != -1) {
 
         Write_Pre();
-
+        //print_trace();
         s = MessageToString(msg);
 #ifdef __SIMULATION__
 
         char buffer[1024] = {0};
+        
         cout << "[" << __PRETTY_FUNCTION__ << "] Send command: " << s << endl << flush;
-        send(sock, s.c_str(), s.length(), 0);
-
+        
+        snd = send(sock, s.c_str(), s.length(), 0);
+        if(snd < 0){
+            throw std::runtime_error{"broken_pipe"};
+        }
         int valread = read(sock, buffer, 1024);
+
         if (valread < 0) {
+
             msgAnswer = new Message(MESSAGE_ANSWER_ROBOT_TIMEOUT);
         } else {
+
             string s(&buffer[0], valread);
             msgAnswer = StringToMessage(s);
             //msgAnswer = new Message(MESSAGE_ANSWER_ACK);
@@ -198,7 +222,7 @@ Message *ComRobot::Write(Message* msg) {
 #endif
     } else {
         cerr << __PRETTY_FUNCTION__ << ": Com port not open" << endl << flush;
-        throw std::runtime_error{"Com port not open"};
+        throw std::runtime_error{"port_not_open"};
     }
 
     // deallocation of msg

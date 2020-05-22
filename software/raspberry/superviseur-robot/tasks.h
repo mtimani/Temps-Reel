@@ -20,6 +20,7 @@
 
 #include <unistd.h>
 #include <iostream>
+#include <string>
 
 #include <sys/mman.h>
 #include <alchemy/task.h>
@@ -38,6 +39,10 @@
 #define CAMERA_FIND_POSITION 0
 #define CAMERA_STREAM 1
 #define CAMERA_ASK_ARENA 2
+
+#define COLOR_RED 1
+#define COLOR_BLEU 2
+#define COLOR_GREEN 3
 
 using namespace std;
 
@@ -81,6 +86,8 @@ private:
     Camera cam;
     Arena arena;
     bool arenaConfirmed = false;
+    char reset_ongoing = 0;
+    char reset_robot = 0;   
     
     
     
@@ -90,18 +97,17 @@ private:
     /* Tasks                                                              */
     /**********************************************************************/
     RT_TASK th_server;
-    RT_TASK th_sendToMon;
-    RT_TASK th_receiveFromMon;
+    RT_TASK th_sendToMon; 
+    RT_TASK th_receiveFromMon; 
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
     //Our tasks
     RT_TASK th_refreshWD;
-    RT_TASK th_disconnectServer;
     RT_TASK th_batteryLevel;
     RT_TASK th_comCamera;
     RT_TASK th_actionCamera;
-    RT_TASK th_closeRobot;
+    RT_TASK th_reset;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -111,6 +117,7 @@ private:
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
     //Our Mutexes
+    RT_MUTEX mutex_reset;
     RT_MUTEX mutex_watchDog;
     RT_MUTEX mutex_error_count;
     RT_MUTEX mutex_camera;
@@ -124,14 +131,17 @@ private:
     /**********************************************************************/
     /* Semaphores                                                         */
     /**********************************************************************/
-    RT_SEM sem_barrier;
+    RT_SEM sem_barrier_monitor;
+   //RT_SEM sem_barrier_robot;
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
+    RT_SEM sem_serverOk2;
+    RT_SEM sem_serverOk3;
     RT_SEM sem_startRobot;
     //Our Semaphores
     RT_SEM sem_refreshWD;
-    RT_SEM sem_batteryLevel;
-    RT_SEM sem_closeRobot;
+    RT_SEM sem_otherComRobot;
+    RT_SEM sem_reset;
     RT_SEM sem_camera;
     RT_SEM sem_comCamera;
     RT_SEM sem_startStream;
@@ -180,6 +190,11 @@ private:
     /* Queue services                                                     */
     /**********************************************************************/
     /**
+     * Flush given queue
+     * @param queue Queue identifier
+     */
+    void FlushQueue(RT_QUEUE *queue);
+    /**
      * Write a message in a given queue
      * @param queue Queue identifier
      * @param msg Message to be stored
@@ -193,6 +208,13 @@ private:
      */
     Message *ReadInQueue(RT_QUEUE *queue);
     
+    
+    
+    /**
+     * Handlke the lost of the communication with the robot
+     * @param msg
+     */
+    Message* WriteRobot(Message* msg);
     /**
      * @brief Thread handling the WatchDog periodical refresh
      */
@@ -224,11 +246,14 @@ private:
      * @brief Thread handling the actions with the camera
      */
     
+    void print_trace(void);
     
-    void CloseRobotTask(void * arg);
+    void ResetTask(void * arg);
 /**
      * @brief Thread closing stopping Robot 
      */
+    
+    std::string color(string stg, int color); 
 };
 
 #endif // __TASKS_H__ 

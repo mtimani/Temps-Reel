@@ -119,6 +119,25 @@ void reset(){
     cout << ">>> XX I stop XX" << endl;
 }
 
+#define COLOR_RED 1
+#define COLOR_BLEU 2
+#define COLOR_GREEN 3
+
+std::string color(string stg, int color){
+    switch(color){
+        case COLOR_RED:
+            return "\e[31m" + stg + "\e[0m";
+        case COLOR_GREEN:
+            return "\e[32m" + stg + "\e[0m";
+        case COLOR_BLEU:
+            return "\e[34m" + stg + "\e[0m";
+        default:
+            return stg;
+            break;
+            
+    }
+}
+
 int main(int argc, char const *argv[]) {
     if (argc != 1){
         if (argv[1] == std::string("noerror")){
@@ -184,6 +203,27 @@ int main(int argc, char const *argv[]) {
             print_time(start_time);
             printf(": I received a message %s\n", buffer);
             switch (buffer[0]) {
+                case LABEL_ROBOT_RELOAD_WD:
+                    //cout << "HEREDFKFDJFJ" << endl;
+                    clock_gettime(CLOCK_REALTIME, &t);
+                    e = ellapse(start_wd, t);
+                    e = (e / 1000000) % 1000;
+                    if (isWD) {
+                        if ((e < 50) || (e > 950)) {
+                            cout << ">>> Just in time for a reload " << e << "ms" << endl;
+                            last_call = t;
+                            status = 0;
+                            s += LABEL_ROBOT_OK;
+                        } else {
+                            status++;
+                            cout << color(">>> You missed the date, -1 point ", COLOR_RED) << color(to_string(e), COLOR_RED) << "ms (" << status << ")" << endl;
+                             clock_gettime(CLOCK_REALTIME, &start_wd);
+                            s += LABEL_ROBOT_UNKNOWN_COMMAND;
+                        }
+                    } else {
+                        cout << "Why you said that, I do nothing" << endl;
+                    }
+                    break;
                 case LABEL_ROBOT_START_WITHOUT_WD:
                     cout << ">>> I start without watchdog" << endl;
                     s += LABEL_ROBOT_OK;
@@ -230,7 +270,7 @@ int main(int argc, char const *argv[]) {
                     s += LABEL_ROBOT_OK;
                     break;
                 case LABEL_ROBOT_GET_BATTERY:
-                    cout << ">>> I give you my battery level :-o" << endl;
+                    //cout << ">>> I give you my battery level :-o" << endl;
                     clock_gettime(CLOCK_REALTIME, &t);
                     e = ellapse(start_time, t);
                     if (e > 20000000000) {
@@ -241,26 +281,6 @@ int main(int argc, char const *argv[]) {
                         } else {
                             s += '2';
                         }
-                    }
-                    break;
-                case LABEL_ROBOT_RELOAD_WD:
-                    clock_gettime(CLOCK_REALTIME, &t);
-                    e = ellapse(start_wd, t);
-                    e = (e / 1000000) % 1000;
-                    if (isWD) {
-                        if ((e < 50) || (e > 950)) {
-                            cout << ">>> Just in time for a reload " << e << "ms" << endl;
-                            last_call = t;
-                            status = 0;
-                            s += LABEL_ROBOT_OK;
-                        } else {
-                            status++;
-                            cout << ">>> You missed the date, -1 point " << e << "ms (" << status << ")" << endl;
-
-                            s += LABEL_ROBOT_UNKNOWN_COMMAND;
-                        }
-                    } else {
-                        cout << "Why you said that, I do nothing" << endl;
                     }
                     break;
                 case LABEL_ROBOT_POWEROFF:

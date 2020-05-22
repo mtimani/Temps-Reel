@@ -30,6 +30,10 @@
 
 #include "base64/base64.h"
 
+#include <cerrno>
+#include <cstring>
+//extern int errno;
+
 /*
  * @brief Constants used for sending commands to monitor
  */
@@ -97,21 +101,47 @@ int ComMonitor::Open(int port) {
 
     if (bind(socketFD, (struct sockaddr *) &server, sizeof (server)) < 0) {
         cerr<<"["<<__PRETTY_FUNCTION__<<"] Can not bind socket ("<<to_string(port)<<")"<<endl<<flush;
+        cerr << "Error bind: " << std::strerror(errno) << endl << flush;
         throw std::runtime_error{"Can not bind socket"};
     }
 
     listen(socketFD, 1);
+    
+    FlushReceivBuffer();
 
     return socketFD;
 }
+
+
+/**
+ * Flush the receiving buffer of the socket 
+ */
+void ComMonitor::FlushReceivBuffer() {
+    char length=1;
+    long long int data;
+    while ( length > 0){
+        length = recv(clientID, (void*) &data, sizeof(long long int), MSG_DONTWAIT ) ;
+    }
+    //cout << "Buffer from monitor wiped out !!!!" << endl << flush;
+
+}
+
 
 /**
  * Close socket and server
  */
 void ComMonitor::Close() {
+    char length=1;
+    long long int data;
+    while ( length > 0){
+        length = recv(clientID, (void*) &data, sizeof(long long int), MSG_DONTWAIT ) ;
+    }
+    //cout << "Buffer from monitor wiped out !!!!" << endl << flush;
+    shutdown(socketFD, SHUT_RDWR); // Ensure that the socket is closed properly even there is data in the receiving buffer
     close(socketFD);
 
     socketFD = -1;
+    clientID= -1;
 }
 
 /**
@@ -124,7 +154,7 @@ int ComMonitor::AcceptClient() {
     int c = sizeof (struct sockaddr_in);
 
     clientID = accept(socketFD, (struct sockaddr *) &client, (socklen_t*) & c);
-
+    cout << "Erreur accept: " << std::strerror(errno) << endl << flush;
     if (clientID < 0)
         throw std::runtime_error {"Accept failed"};
 
@@ -140,6 +170,7 @@ int ComMonitor::AcceptClient() {
  */
 void ComMonitor::Write(Message *msg) {
     string str;
+    int error;
     
     // Call user method before Write
     Write_Pre();
@@ -148,7 +179,14 @@ void ComMonitor::Write(Message *msg) {
     str = MessageToString(msg);
 
     //cout << "Message sent to monitor: " << str->c_str() << endl;
-    write(clientID, str.c_str(), str.length());
+    //cout << "The wAyyyy" << endl << flush;
+    error = write(clientID, str.c_str(), str.length());
+    /*if(error < 0){
+        cout << "Erreur: " << std::strerror(errno) << endl << flush;
+    }else{
+        cout << "Helloo" << endl << flush;
+        cout << str << endl << flush;
+    }*/
 
     if (!msg->CompareID(MESSAGE_CAM_IMAGE)) {
         delete(msg);
@@ -170,11 +208,11 @@ Message *ComMonitor::Read() {
     string s;
     char data;
     bool endReception = false;
-    Message *msg;
+    Message *msg=NULL;
 
     // Call user method before read
     Read_Pre();
-
+    cout << "read: " << clientID << endl << flush;
     if (clientID > 0) {
         while (!endReception) {
             if ((length = recv(clientID, (void*) &data, 1, MSG_WAITALL)) > 0) {
@@ -194,6 +232,7 @@ Message *ComMonitor::Read() {
         else {
             msg = StringToMessage(s);
         }
+        
     }
 
     // Call user method after read
@@ -354,4 +393,9 @@ Message *ComMonitor::StringToMessage(string &s) {
     }
 
     return msg;
+}
+
+
+int ComMonitor::isAlive(){
+    return clientID == -1 ? 0 : 1;
 }

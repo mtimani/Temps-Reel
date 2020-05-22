@@ -140,7 +140,10 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_sem_create(&sem_serverOk2, NULL, 0, S_FIFO)) {
+    // Creation of both sem_serverOk2 and 3 because of a high feeling of disfunctionnement of rt_sem_broadcast during some test
+    // Precisely when it comes of the reinitialization of the semaphore to zero. It seems that other thread could pass rt_sem_p
+    // just after a broadcast.
+    if (err = rt_sem_create(&sem_serverOk2, NULL, 0, S_FIFO)) { 
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -325,7 +328,7 @@ void Tasks::Stop() {
    
     rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
     robotStarted = 0;
-    cout << "RobotStarted = 0" << endl << flush;
+    //cout << "RobotStarted = 0" << endl << flush;
     rt_mutex_release(&mutex_robotStarted);
     
     rt_mutex_delete(&mutex_monitor);
@@ -334,17 +337,16 @@ void Tasks::Stop() {
         exit(EXIT_FAILURE);
     }
     
-    cout << "Acqu mutex monitor" << endl << flush;
+    //cout << "Acqu mutex monitor" << endl << flush;
     rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
-    cout << "Attempt close monitor" << endl << flush;
+    //cout << "Attempt close monitor" << endl << flush;
     monitor.Close();
     cout << "Monitor closed" << endl << flush;
-
     rt_mutex_release(&mutex_monitor);
+    
     rt_mutex_acquire(&mutex_robot, TM_INFINITE);
     robot.Close();
-            cout << "Robot closed" << endl << flush;
-
+    cout << "Robot closed" << endl << flush;
     rt_mutex_release(&mutex_robot);
     
 }
@@ -366,10 +368,9 @@ void sigIgnor(int i){
  */
 void Tasks::ServerTask(void *arg) {
     int status;
-    //signal (SIGABRT, sigIgnor);
     while(1){
-        cout << "SeverTask is waiting barrier " << endl << flush;
-        // Synchronization barrier (waiting that all tasks are started)
+        //cout << "SeverTask is waiting barrier_monitor " << endl << flush;
+
         rt_sem_p(&sem_barrier_monitor, TM_INFINITE);
         //rt_task_sleep(rt_timer_ns2ticks(2000000000));
         cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
@@ -379,8 +380,6 @@ void Tasks::ServerTask(void *arg) {
         rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
         status = monitor.Open(SERVER_PORT);
         rt_mutex_release(&mutex_monitor);
-
-        cout << "Open done staztus " << status << endl << flush;
 
         //Before
         /*if (status < 0) throw std::runtime_error {
@@ -428,7 +427,7 @@ void Tasks::SendToMonTask(void* arg) {
         while (monitorAlive) {
             //cout << "wait msg to send" << endl << flush;
             try{
-                //cout << color("MESSSGGG", COLOR_RED) << endl << flush;
+             
                 msg = ReadInQueue(&q_messageToMon);
                 
                 rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
@@ -458,7 +457,6 @@ void Tasks::ReceiveFromMonTask(void *arg) {
     while(1){
         notreinit = true;
         cout << color("ReceivFromMon is waiting barrier ", COLOR_BLEU) << endl << flush;
-        // Synchronization barrier (waiting that all tasks are starting)
         //cout << color("ReceivFromMon is waiting Server ", COLOR_BLEU) << endl << flush;
         
         rt_sem_p(&sem_serverOk, TM_INFINITE);
@@ -572,23 +570,6 @@ void Tasks::OpenComRobot(void *arg) {
     }
 }
 
-void Tasks::print_trace (void)
-{
-  /*void *array[10];
-  size_t size;
-  char **strings;
-  size_t i;
-
-  size = backtrace (array, 10);
-  strings = backtrace_symbols (array, size);
-
-  printf ("Obtained %zd stack frames.\n", size);
-
-  for (i = 0; i < size; i++)
-     printf ("%s\n", strings[i]);
-
-  free (strings);*/
-}
 
 
 /**
@@ -652,9 +633,7 @@ void Tasks::MoveTask(void *arg) {
     signal (SIGPIPE, SIG_IGN);
     signal (SIGSEGV, sigIgnor);
     while(1){    
-        // Synchronization barrier (waiting that all tasks are starting)
-        //rt_sem_p(&sem_barrier, TM_INFINITE);
-        cout << "MoveTask is waiting barrier" << endl << flush;
+        //cout << "MoveTask is waiting barrier" << endl << flush;
         rt_sem_p(&sem_otherComRobot, TM_INFINITE);
         cout << color("Start ", COLOR_BLEU) << __PRETTY_FUNCTION__ << endl << flush;
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);

@@ -26,15 +26,9 @@
 #include "tasks.h"
 #endif // __WITH_PTHREAD__
 
-Tasks* ptr_tasks = NULL;
-
-void sigIgnore( int signum ){
-    // Ignore
-}
-
 int main(int argc, char **argv) {
     Tasks tasks;
-    //signal (SIGPIPE, sigIgnore);
+
 
     //Lock the memory to avoid memory swapping for this program
     mlockall(MCL_CURRENT | MCL_FUTURE);

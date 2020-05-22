@@ -240,19 +240,15 @@ private:
      * @brief Thread handling the actions with the camera
      */
     void ActionCameraTask(void * arg);
-    
-    
-     /**
-     * @brief Thread handling the actions with the camera
+   
+  
+    /**
+     * Thread in charge of the reinitialization of threads
+     * @param arg
      */
-    
-    void print_trace(void);
-    
-    void ResetTask(void * arg);
-/**
-     * @brief Thread closing stopping Robot 
-     */
-    
+    void ResetTask(void * arg
+    );
+
     std::string color(string stg, int color); 
 };
 
